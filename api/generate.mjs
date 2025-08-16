@@ -1,7 +1,6 @@
 // api/generate.mjs
 
 export default async function handler(req, res) {
-  // This log will help us determine if the function even started executing
   console.log("Function handler started.");
 
   if (req.method !== "POST") {
@@ -31,8 +30,10 @@ export default async function handler(req, res) {
     });
 
     if (!response.ok) {
-      const err = await response.text();
-      res.status(500).json({ error: err });
+      // This will log the specific error from Stability AI to your Vercel logs
+      const apiError = await response.text();
+      console.error("Stability AI API Error:", response.status, apiError);
+      res.status(500).json({ error: `API Error: ${response.status} - ${apiError}` });
       return;
     }
 
@@ -43,6 +44,8 @@ export default async function handler(req, res) {
     res.status(200).json({ videoBase64: base64Video });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
+    // This will log any other unexpected error to your Vercel logs
+    console.error("Internal Server Error:", err);
     res.status(500).json({ error: message });
   }
 }
