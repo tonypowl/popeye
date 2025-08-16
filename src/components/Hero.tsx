@@ -1,13 +1,4 @@
-import { useState } from "react";
-
 const Hero = () => {
-  const [prompt, setPrompt] = useState("");
-
-  const handleGenerate = () => {
-    console.log("User prompt:", prompt);
-    // later: send this prompt to backend/AI API
-  };
-
   return (
     <section className="hero">
       <h1>POPEYE</h1>
