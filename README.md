@@ -1,5 +1,4 @@
-# Text-to-Video Experiment 🚀
-
+# POPEYE
 ## Overview
 This project is a simple **text-to-video generator** attempt, built with React (Vite + TypeScript) on the frontend and a lightweight Node.js backend.  
 The goal was to let users type a prompt and generate a short video.
