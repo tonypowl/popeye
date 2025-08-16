@@ -1,7 +1,9 @@
 // api/generate.mjs
 
 export default async function handler(req, res) {
-  console.log("Function handler started.");
+  // Replace with the base URL for the Kling AI API
+  const KLING_API_BASE_URL = "https://api.klingai.com"; 
+  const KLING_API_KEY = process.env.KLING_API_KEY;
 
   if (req.method !== "POST") {
     res.status(405).json({ error: "Only POST allowed" });
@@ -14,38 +16,69 @@ export default async function handler(req, res) {
     return;
   }
 
+  // Set the headers for the API requests
+  const headers = {
+    'Authorization': `Bearer ${KLING_API_KEY}`,
+    'Content-Type': 'application/json',
+  };
+
   try {
-    const response = await fetch("https://api.stability.ai/v2beta/video/generate", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${process.env.STABILITY_API_KEY ?? ""}`,
-        Accept: "video/mp4",
-        "Content-Type": "application/json",
-      },
+    // Step 1: Create a video generation task
+    const createResponse = await fetch(`${KLING_API_BASE_URL}/v1/videos/text2video`, {
+      method: 'POST',
+      headers,
       body: JSON.stringify({
-        prompt,
-        duration: 5,
-        resolution: "512x512",
+        prompt: prompt,
+        duration: 5, // Default duration is 5 seconds
+        model_name: "kling-v1-6",
+        aspect_ratio: "16:9",
       }),
     });
 
-    if (!response.ok) {
-      // This will log the specific error from Stability AI to your Vercel logs
-      const apiError = await response.text();
-      console.error("Stability AI API Error:", response.status, apiError);
-      res.status(500).json({ error: `API Error: ${response.status} - ${apiError}` });
-      return;
+    const createData = await createResponse.json();
+
+    if (!createResponse.ok || createData.code !== 0) {
+      console.error("Kling AI Task Creation Error:", createData);
+      return res.status(500).json({ error: createData.message || "Failed to create Kling AI task." });
     }
 
-    const arrayBuffer = await response.arrayBuffer();
-    const base64Video = Buffer.from(arrayBuffer).toString("base64");
+    const taskId = createData.data.task_id;
 
-    res.setHeader("Content-Type", "application/json");
-    res.status(200).json({ videoBase64: base64Video });
+    // Step 2: Poll for the video result
+    let taskStatus = '';
+    let pollingAttempts = 0;
+    const maxPollingAttempts = 30; // Max 30 attempts, with 10s delay = 5 minutes timeout
+
+    while (taskStatus !== 'succeed' && taskStatus !== 'failed' && pollingAttempts < maxPollingAttempts) {
+      await new Promise(resolve => setTimeout(resolve, 10000)); // Wait for 10 seconds
+      pollingAttempts++;
+
+      const statusResponse = await fetch(`${KLING_API_BASE_URL}/v1/videos/text2video/${taskId}`, {
+        method: 'GET',
+        headers: headers,
+      });
+
+      const statusData = await statusResponse.json();
+      taskStatus = statusData.data.task_status;
+      
+      console.log(`Polling task ${taskId}... Status: ${taskStatus}`);
+
+      if (taskStatus === 'succeed') {
+        const videoUrl = statusData.data.task_result.videos[0].url;
+        return res.status(200).json({ videoUrl: videoUrl });
+      }
+      
+      if (taskStatus === 'failed') {
+        console.error("Kling AI Task Failed:", statusData.data.task_status_msg);
+        return res.status(500).json({ error: statusData.data.task_status_msg || "Video generation failed." });
+      }
+    }
+
+    // If the loop finishes without a successful result, it's a timeout
+    res.status(504).json({ error: "Video generation timed out." });
+
   } catch (err) {
-    const message = err instanceof Error ? err.message : "Unknown error";
-    // This will log any other unexpected error to your Vercel logs
     console.error("Internal Server Error:", err);
-    res.status(500).json({ error: message });
+    res.status(500).json({ error: err.message || "An unexpected error occurred." });
   }
 }
