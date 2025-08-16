@@ -28,9 +28,10 @@ const VideoForm = () => {
         throw new Error(data.error || "Failed to generate video");
       }
 
+      // Stability API might return either a URL or Base64 blob
       setVideoUrl(data.videoUrl);
     } catch (err: any) {
-      setError(err.message);
+      setError(err.message || "Something went wrong");
     } finally {
       setLoading(false);
     }
@@ -43,6 +44,7 @@ const VideoForm = () => {
         onChange={(e) => setPrompt(e.target.value)}
         placeholder="Describe your vision..."
       />
+
       <button onClick={handleGenerate} disabled={loading}>
         {loading ? "⏳ Generating..." : "✨ Generate Video"}
       </button>
@@ -50,7 +52,13 @@ const VideoForm = () => {
       {error && <p style={{ color: "red" }}>{error}</p>}
 
       {videoUrl && (
-        <video src={videoUrl} controls autoPlay loop style={{ marginTop: "1rem", width: "100%" }} />
+        <video
+          src={videoUrl}
+          controls
+          autoPlay
+          loop
+          style={{ marginTop: "1rem", width: "100%" }}
+        />
       )}
     </div>
   );

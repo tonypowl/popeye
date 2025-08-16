@@ -16,7 +16,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       headers: {
         Authorization: `Bearer ${process.env.STABILITY_API_KEY!}`,
         "Content-Type": "application/json",
-        Accept: "application/json",
+        Accept: "video/mp4", // <-- request actual video stream
       },
       body: JSON.stringify({
         prompt,
@@ -30,9 +30,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(500).json({ error: err });
     }
 
-    const data = await response.json();
-    // Stability should return a URL for the video
-    return res.status(200).json({ videoUrl: data.video_url });
+    // get mp4 binary
+    const arrayBuffer = await response.arrayBuffer();
+    const base64Video = Buffer.from(arrayBuffer).toString("base64");
+
+    // send as base64 so frontend can reconstruct
+    return res.status(200).json({ videoBase64: base64Video });
   } catch (err: any) {
     return res.status(500).json({ error: err.message });
   }
