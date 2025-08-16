@@ -1,6 +1,9 @@
 // api/generate.mjs
 
 export default async function handler(req, res) {
+  // This log will help us determine if the function even started executing
+  console.log("Function handler started.");
+
   if (req.method !== "POST") {
     res.status(405).json({ error: "Only POST allowed" });
     return;
@@ -33,7 +36,6 @@ export default async function handler(req, res) {
       return;
     }
 
-    // convert binary response to base64
     const arrayBuffer = await response.arrayBuffer();
     const base64Video = Buffer.from(arrayBuffer).toString("base64");
 
