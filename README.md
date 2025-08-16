@@ -1,69 +1,40 @@
-# React + TypeScript + Vite
+# Text-to-Video Experiment 🚀
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+## Overview
+This project is a simple **text-to-video generator** attempt, built with React (Vite + TypeScript) on the frontend and a lightweight Node.js backend.  
+The goal was to let users type a prompt and generate a short video.
 
-Currently, two official plugins are available:
+## AI Model Attempts 🎥
+I explored several AI text-to-video models and APIs:
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- **Kling AI** – required reference input, not usable for free.
+- **Stability AI** – no proper text-to-video model available.
+- **Pika Labs** – works but credits run out quickly.
+- **Vadoo AI** – gave 400 free credits, but not enough to test properly.
+- **Hugging Face Endpoints** – inference worked, but usage was paid.
 
-## Expanding the ESLint configuration
+In short, I ran into a wall with **API credits and paywalls**.  
+Because of this, the project can’t generate real videos on demand in its current form.
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+## What Happens Instead ✨
+To keep the project functional, I added a **placeholder video** that plays when you submit a prompt.  
+This way, the app still demonstrates the flow:  
+1. User enters a prompt.  
+2. Backend call happens.  
+3. A video (placeholder) is shown.
 
-```js
-export default tseslint.config([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+It’s not the real AI output, but it makes the app demo-able.
 
-      // Remove tseslint.configs.recommended and replace with this
-      ...tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      ...tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      ...tseslint.configs.stylisticTypeChecked,
+## Deployment
+The app is deployed on **Vercel**, so you can try it live.  
+Frontend: React + Vite  
+Backend: Node.js (API route)
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+## Notes
+This project was more of an experiment to see how far I could go with free/limited APIs.  
+If proper credits or a self-hostable open-source text-to-video model become available, the backend can be updated to replace the placeholder with real generated content.
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+---
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default tseslint.config([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+👉 For now, think of it as a **prototype / proof of concept**.  
+It shows the workflow, but video generation itself is blocked by credit limits.
