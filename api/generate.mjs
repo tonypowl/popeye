@@ -1,7 +1,6 @@
-// api/generate.ts
-import type { VercelRequest, VercelResponse } from "@vercel/node";
+// api/generate.mjs
 
-export default async function handler(req: VercelRequest, res: VercelResponse) {
+export default async function handler(req, res) {
   if (req.method !== "POST") {
     res.status(405).json({ error: "Only POST allowed" });
     return;
@@ -13,7 +12,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return;
   }
 
-//exception handling
   try {
     const response = await fetch("https://api.stability.ai/v2beta/video/generate", {
       method: "POST",
@@ -41,7 +39,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     res.setHeader("Content-Type", "application/json");
     res.status(200).json({ videoBase64: base64Video });
-  } catch (err: unknown) {
+  } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
     res.status(500).json({ error: message });
   }
