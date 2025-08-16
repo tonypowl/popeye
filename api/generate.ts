@@ -1,3 +1,4 @@
+// api/generate.ts
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -15,8 +16,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       method: "POST",
       headers: {
         Authorization: `Bearer ${process.env.STABILITY_API_KEY!}`,
+        Accept: "video/mp4",
         "Content-Type": "application/json",
-        Accept: "video/mp4", // <-- request actual video stream
       },
       body: JSON.stringify({
         prompt,
@@ -30,11 +31,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(500).json({ error: err });
     }
 
-    // get mp4 binary
+    // convert binary response to base64
     const arrayBuffer = await response.arrayBuffer();
     const base64Video = Buffer.from(arrayBuffer).toString("base64");
 
-    // send as base64 so frontend can reconstruct
+    res.setHeader("Content-Type", "application/json");
     return res.status(200).json({ videoBase64: base64Video });
   } catch (err: any) {
     return res.status(500).json({ error: err.message });
