@@ -1,7 +1,5 @@
-// api/generate.ts
-import type { VercelRequest, VercelResponse } from "@vercel/node";
-
-export default async function handler(req: VercelRequest, res: VercelResponse) {
+// api/generate.js
+module.exports = async function handler(req, res) {
   if (req.method !== "POST") {
     res.status(405).json({ error: "Only POST allowed" });
     return;
@@ -34,13 +32,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return;
     }
 
-    // convert binary response to base64
     const arrayBuffer = await response.arrayBuffer();
     const base64Video = Buffer.from(arrayBuffer).toString("base64");
 
     res.setHeader("Content-Type", "application/json");
     res.status(200).json({ videoBase64: base64Video });
-  } catch (err: any) {
+  } catch (err) {
     res.status(500).json({ error: err.message });
   }
-}
+};
