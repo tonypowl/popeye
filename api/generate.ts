@@ -13,6 +13,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return;
   }
 
+//exception handling
   try {
     const response = await fetch("https://api.stability.ai/v2beta/video/generate", {
       method: "POST",
