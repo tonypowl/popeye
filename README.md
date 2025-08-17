@@ -31,7 +31,7 @@ Backend: Node.js (API route)
 
 ## Notes
 This project was more of an experiment to see how far I could go with free/limited APIs.  
-If you could suggest a free open-source text-to-video model that  i could use, the backend can be updated to replace the placeholder with real generated content in a few days (ill take my time with it, this was very rushed)
+If you could suggest a free open-source text-to-video model that  i could use or provide me with the reauired funds, the backend can be updated to replace the placeholder with real generated content in a few hours.
 
 ---
 
