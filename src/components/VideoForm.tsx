@@ -13,19 +13,34 @@ const VideoForm = () => {
     setError("");
     setVideoUrl("");
 
-    // Mock: If API is slow/limited, show placeholder video and log prompt
-    setTimeout(() => {
-      console.log("[MOCK] Would send prompt to backend/API:", prompt);
-      setVideoUrl("https://sample-videos.com/video123/mp4/720/big_buck_bunny_720p_1mb.mp4");
-      setLoading(false);
-      setError("");
-    }, 1500);
+    try {
+      // Send the prompt to our new backend API endpoint
+      const response = await fetch('/api/generate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ prompt: prompt }),
+      });
 
-    // In production, you would:
-    // 1. Send the prompt to your backend API (e.g., /api/generate)
-    // 2. The backend would call the AI service (e.g., Hugging Face, Pika Labs)
-    // 3. Return the generated video URL or blob to the frontend
-    // 4. Display the video to the user
+      // If the response is not successful, throw an error
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || `HTTP error! Status: ${response.status}`);
+      }
+
+      // Get the video URL from the successful response
+      const data = await response.json();
+      setVideoUrl(data.videoUrl);
+
+    } catch (e: any) {
+      // Display any errors to the user
+      setError(e.message);
+      console.error("Failed to generate video:", e);
+    } finally {
+      // Ensure the loading state is turned off, whether it succeeded or failed
+      setLoading(false);
+    }
   };
 
   return (
