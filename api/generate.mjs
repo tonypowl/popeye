@@ -15,13 +15,26 @@ const VEO_API_ENDPOINT = `${GOOGLE_LOCATION}-aiplatform.googleapis.com`;
 // Explicitly pass projectId to GoogleAuth
 let authClient;
 if (process.env.GOOGLE_SERVICE_ACCOUNT_KEY_JSON) {
-  const credentials = JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_KEY_JSON);
-  authClient = new GoogleAuth({
-    credentials,
-    scopes: ['https://www.googleapis.com/auth/cloud-platform'],
-    projectId: GOOGLE_PROJECT_ID,
-  });
+  try {
+    const credentials = JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_KEY_JSON);
+    console.log("Parsed Google Credentials successfully."); // Debug log
+    // console.log("Credentials object keys:", Object.keys(credentials)); // Further debug
+    authClient = new GoogleAuth({
+      credentials,
+      scopes: ['https://www.googleapis.com/auth/cloud-platform'],
+      projectId: GOOGLE_PROJECT_ID,
+    });
+  } catch (parseError) {
+    console.error("ERROR: Failed to parse GOOGLE_SERVICE_ACCOUNT_KEY_JSON:", parseError.message);
+    // If parsing fails, authClient will remain undefined or improperly initialized
+    // This will cause subsequent authClient calls to fail.
+    authClient = new GoogleAuth({ // Fallback to default auth, which will likely fail without proper env
+      scopes: ['https://www.googleapis.com/auth/cloud-platform'],
+      projectId: GOOGLE_PROJECT_ID,
+    });
+  }
 } else {
+  console.error("ERROR: GOOGLE_SERVICE_ACCOUNT_KEY_JSON environment variable is not set.");
   authClient = new GoogleAuth({
     scopes: ['https://www.googleapis.com/auth/cloud-platform'],
     projectId: GOOGLE_PROJECT_ID,
@@ -42,20 +55,18 @@ export default async function handler(req, res) {
 
   try {
     const projectId = await authClient.getProjectId();
-
-    // --- IMPORTANT CHANGE HERE: How to call the Veo model ---
-    // For Veo, we typically use the prediction service directly, or a specific client for video.
-    // The VertexAI client itself might not expose 'getGenerativeModel' for all model types directly.
-    // We'll use the generic prediction endpoint for now, and you'll need to verify the exact
-    // payload structure for Veo from Google Cloud's official documentation.
+    console.log("Successfully obtained project ID from authClient:", projectId); // Debug log
 
     const accessToken = await authClient.getAccessToken();
+    console.log("Successfully obtained access token. Token starts with:", accessToken.token.substring(0, 10), "..."); // Debug log
+
     const headers = {
       'Authorization': `Bearer ${accessToken.token}`,
       'Content-Type': 'application/json',
     };
 
     const predictUrl = `https://${VEO_API_ENDPOINT}/v1/projects/${projectId}/locations/${GOOGLE_LOCATION}/publishers/google/models/${MODEL_ID}:predict`;
+    console.log("Calling Veo Prediction API URL:", predictUrl); // Debug log
 
     const instance = {
       prompt: prompt,
@@ -78,9 +89,6 @@ export default async function handler(req, res) {
       return res.status(predictResponse.status).json({ error: predictData.error?.message || 'Failed to get Veo prediction.' });
     }
     
-    // The response structure for Veo's prediction will be complex.
-    // You'll need to inspect 'predictData' to find the video URL or data.
-    // This is a placeholder for how you might extract it.
     const videoResult = predictData.predictions?.[0]?.bytesBase64Encoded || 'Video generation in progress or no direct video data returned.';
 
     return res.status(200).json({ videoData: videoResult });
