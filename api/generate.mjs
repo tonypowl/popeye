@@ -1,34 +1,42 @@
 // api/generate.mjs
 
-// This example uses the official Google Cloud Node.js client library.
 import { VertexAI } from '@google-cloud/vertexai';
 import { GoogleAuth } from 'google-auth-library';
+import { promises as fs } from 'fs'; // Import Node.js file system promises
+import { tmpdir } from 'os'; // Import temporary directory utility
+import { join } from 'path'; // Import path utility
 
 // Vertex AI authentication and client setup
 const GOOGLE_PROJECT_ID = process.env.GOOGLE_PROJECT_ID;
-const GOOGLE_LOCATION = 'asia-south1'; // Or your chosen region
+const GOOGLE_LOCATION = 'asia-south1'; // Ensure this matches your GCP project region
 const MODEL_ID = 'veo-2.0-generate-001'; // Veo model for text-to-video
 
-// Explicitly define the API endpoint for Veo, as it might differ from generic generative models
 const VEO_API_ENDPOINT = `${GOOGLE_LOCATION}-aiplatform.googleapis.com`;
 
-// Explicitly pass projectId to GoogleAuth
 let authClient;
+let credentialsFilePath; // To store the path to our temporary credentials file
+
+// This block will run once per cold start of the serverless function
+// to set up the authentication client.
 if (process.env.GOOGLE_SERVICE_ACCOUNT_KEY_JSON) {
   try {
-    const credentials = JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_KEY_JSON);
-    console.log("Parsed Google Credentials successfully."); // Debug log
-    // console.log("Credentials object keys:", Object.keys(credentials)); // Further debug
+    const credentialsJson = process.env.GOOGLE_SERVICE_ACCOUNT_KEY_JSON;
+    console.log("Attempting to parse and use GOOGLE_SERVICE_ACCOUNT_KEY_JSON.");
+
+    // Create a temporary file to store the credentials
+    credentialsFilePath = join(tmpdir(), `gcp-credentials-${Date.now()}.json`);
+    await fs.writeFile(credentialsFilePath, credentialsJson);
+    console.log("Temporary credentials file created at:", credentialsFilePath);
+
     authClient = new GoogleAuth({
-      credentials,
+      keyFile: credentialsFilePath, // Point to the temporary file
       scopes: ['https://www.googleapis.com/auth/cloud-platform'],
       projectId: GOOGLE_PROJECT_ID,
     });
-  } catch (parseError) {
-    console.error("ERROR: Failed to parse GOOGLE_SERVICE_ACCOUNT_KEY_JSON:", parseError.message);
-    // If parsing fails, authClient will remain undefined or improperly initialized
-    // This will cause subsequent authClient calls to fail.
-    authClient = new GoogleAuth({ // Fallback to default auth, which will likely fail without proper env
+  } catch (setupError) {
+    console.error("ERROR: Failed to set up GoogleAuth with temporary file:", setupError.message);
+    // Fallback if temporary file creation or auth setup fails
+    authClient = new GoogleAuth({
       scopes: ['https://www.googleapis.com/auth/cloud-platform'],
       projectId: GOOGLE_PROJECT_ID,
     });
@@ -55,10 +63,10 @@ export default async function handler(req, res) {
 
   try {
     const projectId = await authClient.getProjectId();
-    console.log("Successfully obtained project ID from authClient:", projectId); // Debug log
+    console.log("Successfully obtained project ID from authClient:", projectId);
 
     const accessToken = await authClient.getAccessToken();
-    console.log("Successfully obtained access token. Token starts with:", accessToken.token.substring(0, 10), "..."); // Debug log
+    console.log("Successfully obtained access token. Token starts with:", accessToken.token.substring(0, 10), "...");
 
     const headers = {
       'Authorization': `Bearer ${accessToken.token}`,
@@ -66,7 +74,7 @@ export default async function handler(req, res) {
     };
 
     const predictUrl = `https://${VEO_API_ENDPOINT}/v1/projects/${projectId}/locations/${GOOGLE_LOCATION}/publishers/google/models/${MODEL_ID}:predict`;
-    console.log("Calling Veo Prediction API URL:", predictUrl); // Debug log
+    console.log("Calling Veo Prediction API URL:", predictUrl);
 
     const instance = {
       prompt: prompt,
@@ -105,5 +113,17 @@ export default async function handler(req, res) {
         return res.status(403).json({ error: "Permission denied. Ensure your service account has 'Vertex AI User' role." });
     }
     return res.status(500).json({ error: error.message || 'An unexpected error occurred with the Vertex AI API.' });
+  } finally {
+    // Clean up the temporary file after the function execution
+    // Note: In Vercel, the function container might be reused, so this cleanup
+    // isn't strictly necessary for every invocation but good practice.
+    if (credentialsFilePath) {
+      try {
+        await fs.unlink(credentialsFilePath);
+        console.log("Temporary credentials file deleted.");
+      } catch (cleanupError) {
+        console.warn("Failed to delete temporary credentials file:", cleanupError.message);
+      }
+    }
   }
 }
