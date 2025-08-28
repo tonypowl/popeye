@@ -6,30 +6,29 @@ import { GoogleAuth } from 'google-auth-library';
 
 // Vertex AI authentication and client setup
 const GOOGLE_PROJECT_ID = process.env.GOOGLE_PROJECT_ID;
-const GOOGLE_LOCATION = 'us-central1'; // Or your chosen region
-const MODEL_ID = 'veo-1.0-generate'; // Veo model for text-to-video
+const GOOGLE_LOCATION = 'asia-south1'; // Or your chosen region
+const MODEL_ID = 'veo-2.0-generate-001'; // Veo model for text-to-video
 
-// --- IMPORTANT CHANGE HERE: Explicitly pass projectId to GoogleAuth ---
+// Explicitly define the API endpoint for Veo, as it might differ from generic generative models
+const VEO_API_ENDPOINT = `${GOOGLE_LOCATION}-aiplatform.googleapis.com`;
+
+// Explicitly pass projectId to GoogleAuth
 let authClient;
 if (process.env.GOOGLE_SERVICE_ACCOUNT_KEY_JSON) {
   const credentials = JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_KEY_JSON);
   authClient = new GoogleAuth({
     credentials,
     scopes: ['https://www.googleapis.com/auth/cloud-platform'],
-    projectId: GOOGLE_PROJECT_ID, // Explicitly pass the project ID here
+    projectId: GOOGLE_PROJECT_ID,
   });
 } else {
-  // Fallback to default authentication (e.g., if running on GCP directly)
   authClient = new GoogleAuth({
     scopes: ['https://www.googleapis.com/auth/cloud-platform'],
-    projectId: GOOGLE_PROJECT_ID, // Also pass it here for consistency
+    projectId: GOOGLE_PROJECT_ID,
   });
 }
-// --- END IMPORTANT CHANGE ---
-
 
 export default async function handler(req, res) {
-  // Log the project ID being used for debugging
   console.log("Using Google Cloud Project ID:", GOOGLE_PROJECT_ID);
 
   if (req.method !== 'POST') {
@@ -42,39 +41,51 @@ export default async function handler(req, res) {
   }
 
   try {
-    // The projectId is now explicitly set in authClient, so getProjectId() should work
-    const projectId = await authClient.getProjectId(); 
-    const vertexAI = new VertexAI({
-      project: projectId,
-      location: GOOGLE_LOCATION,
-    });
-    const generativeModel = vertexAI.getGenerativeModel({
-      model: MODEL_ID,
-    });
+    const projectId = await authClient.getProjectId();
 
-    const request = {
-      contents: [{
-        role: 'user',
-        parts: [{ text: prompt }]
-      }],
-      // The Veo model parameters may vary and are in preview.
-      // You'll need to check the latest documentation for correct values.
-      generationConfig: {
-        max_output_tokens: 1024, // Example parameter, adjust as needed
-      },
+    // --- IMPORTANT CHANGE HERE: How to call the Veo model ---
+    // For Veo, we typically use the prediction service directly, or a specific client for video.
+    // The VertexAI client itself might not expose 'getGenerativeModel' for all model types directly.
+    // We'll use the generic prediction endpoint for now, and you'll need to verify the exact
+    // payload structure for Veo from Google Cloud's official documentation.
+
+    const accessToken = await authClient.getAccessToken();
+    const headers = {
+      'Authorization': `Bearer ${accessToken.token}`,
+      'Content-Type': 'application/json',
     };
 
-    const result = await generativeModel.generateContent(request);
-    // The Veo API's response structure for video generation is complex and in preview.
-    // This example assumes it returns a text field that might contain a URL or ID.
-    // You will need to inspect the actual 'result' object in your logs to parse it correctly.
-    const videoResponse = result.response.candidates[0].content.parts[0].text;
+    const predictUrl = `https://${VEO_API_ENDPOINT}/v1/projects/${projectId}/locations/${GOOGLE_LOCATION}/publishers/google/models/${MODEL_ID}:predict`;
+
+    const instance = {
+      prompt: prompt,
+      // Add other Veo-specific parameters here as needed, based on documentation
+      // For example:
+      // duration: "5s",
+      // resolution: "512x512",
+    };
+
+    const predictResponse = await fetch(predictUrl, {
+      method: 'POST',
+      headers: headers,
+      body: JSON.stringify({ instances: [instance] }),
+    });
+
+    const predictData = await predictResponse.json();
+
+    if (!predictResponse.ok) {
+      console.error('Veo Prediction API Error:', predictResponse.status, predictData);
+      return res.status(predictResponse.status).json({ error: predictData.error?.message || 'Failed to get Veo prediction.' });
+    }
     
-    // For now, we'll return this raw text. In a real app, you'd parse this for a video URL.
-    return res.status(200).json({ videoData: videoResponse });
+    // The response structure for Veo's prediction will be complex.
+    // You'll need to inspect 'predictData' to find the video URL or data.
+    // This is a placeholder for how you might extract it.
+    const videoResult = predictData.predictions?.[0]?.bytesBase64Encoded || 'Video generation in progress or no direct video data returned.';
+
+    return res.status(200).json({ videoData: videoResult });
 
   } catch (error) {
-    // Enhanced error logging
     console.error('Vertex AI API Error Details:', error);
     if (error.code) {
       console.error('Error Code:', error.code);
