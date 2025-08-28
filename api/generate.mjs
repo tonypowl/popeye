@@ -1,7 +1,6 @@
 // api/generate.mjs
 
 // This example uses the official Google Cloud Node.js client library.
-// You would need to install it: npm install @google-cloud/vertexai google-auth-library
 import { VertexAI } from '@google-cloud/vertexai';
 import { GoogleAuth } from 'google-auth-library';
 
@@ -10,11 +9,25 @@ const GOOGLE_PROJECT_ID = process.env.GOOGLE_PROJECT_ID;
 const GOOGLE_LOCATION = 'us-central1'; // Or your chosen region
 const MODEL_ID = 'veo-1.0-generate'; // Veo model for text-to-video
 
-// This is the standard way to authenticate on Google Cloud, using the
-// GOOGLE_APPLICATION_CREDENTIALS environment variable.
-const auth = new GoogleAuth({
-  scopes: ['https://www.googleapis.com/auth/cloud-platform']
-});
+// --- IMPORTANT CHANGE HERE ---
+// Instead of relying on GOOGLE_APPLICATION_CREDENTIALS as a file path,
+// we'll pass the JSON content directly if available.
+let authClient;
+if (process.env.GOOGLE_SERVICE_ACCOUNT_KEY_JSON) {
+  // Parse the JSON content from the environment variable
+  const credentials = JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_KEY_JSON);
+  authClient = new GoogleAuth({
+    credentials,
+    scopes: ['https://www.googleapis.com/auth/cloud-platform']
+  });
+} else {
+  // Fallback to default authentication (e.g., if running on GCP directly)
+  authClient = new GoogleAuth({
+    scopes: ['https://www.googleapis.com/auth/cloud-platform']
+  });
+}
+// --- END IMPORTANT CHANGE ---
+
 
 export default async function handler(req, res) {
   // Log the project ID being used for debugging
@@ -30,7 +43,7 @@ export default async function handler(req, res) {
   }
 
   try {
-    const projectId = await auth.getProjectId();
+    const projectId = await authClient.getProjectId(); // Use authClient here
     const vertexAI = new VertexAI({
       project: projectId,
       location: GOOGLE_LOCATION,
