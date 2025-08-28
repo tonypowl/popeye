@@ -29,9 +29,10 @@ const VideoForm = () => {
         throw new Error(errorData.error || `HTTP error! Status: ${response.status}`);
       }
 
-      // Get the video URL from the successful response
+      // Get the response data from the successful response
       const data = await response.json();
-      setVideoUrl(data.videoUrl);
+      // Assuming 'videoData' from the backend is the URL or a string to display
+      setVideoUrl(data.videoData);
 
     } catch (e: any) {
       // Display any errors to the user

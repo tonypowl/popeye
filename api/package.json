@@ -1,0 +1,9 @@
+{
+  "name": "popeye-api",
+  "version": "1.0.0",
+  "main": "generate.mjs",
+  "dependencies": {
+    "@google-cloud/vertexai": "^0.1.0",  
+    "google-auth-library": "^9.0.0"       
+  }
+}
