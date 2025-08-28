@@ -9,21 +9,20 @@ const GOOGLE_PROJECT_ID = process.env.GOOGLE_PROJECT_ID;
 const GOOGLE_LOCATION = 'us-central1'; // Or your chosen region
 const MODEL_ID = 'veo-1.0-generate'; // Veo model for text-to-video
 
-// --- IMPORTANT CHANGE HERE ---
-// Instead of relying on GOOGLE_APPLICATION_CREDENTIALS as a file path,
-// we'll pass the JSON content directly if available.
+// --- IMPORTANT CHANGE HERE: Explicitly pass projectId to GoogleAuth ---
 let authClient;
 if (process.env.GOOGLE_SERVICE_ACCOUNT_KEY_JSON) {
-  // Parse the JSON content from the environment variable
   const credentials = JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_KEY_JSON);
   authClient = new GoogleAuth({
     credentials,
-    scopes: ['https://www.googleapis.com/auth/cloud-platform']
+    scopes: ['https://www.googleapis.com/auth/cloud-platform'],
+    projectId: GOOGLE_PROJECT_ID, // Explicitly pass the project ID here
   });
 } else {
   // Fallback to default authentication (e.g., if running on GCP directly)
   authClient = new GoogleAuth({
-    scopes: ['https://www.googleapis.com/auth/cloud-platform']
+    scopes: ['https://www.googleapis.com/auth/cloud-platform'],
+    projectId: GOOGLE_PROJECT_ID, // Also pass it here for consistency
   });
 }
 // --- END IMPORTANT CHANGE ---
@@ -43,7 +42,8 @@ export default async function handler(req, res) {
   }
 
   try {
-    const projectId = await authClient.getProjectId(); // Use authClient here
+    // The projectId is now explicitly set in authClient, so getProjectId() should work
+    const projectId = await authClient.getProjectId(); 
     const vertexAI = new VertexAI({
       project: projectId,
       location: GOOGLE_LOCATION,
